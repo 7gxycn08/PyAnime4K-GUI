@@ -2,7 +2,7 @@
 
 ## PyAnime4K-GUI
 
-PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmpeg and Anime4K custom shaders. It provides an easy way to manage video processing tasks with real-time progress updates and log outputs.
+PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmpeg and [Anime4K](https://github.com/bloc97/Anime4K) custom shaders. It provides an easy way to manage video processing tasks with real-time progress updates and log outputs.
 
 
 # Features
@@ -59,8 +59,14 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
    * Start Upscaling: Begin processing with the "Upscale" button.
    * Cancel Upscaling: Stop the current task with "Cancel."
    * Access Output Folder: Open the output directory to view results.
+  
 
 3. stderr Logs are saved in `output.txt` and progress updates will appear in the application window.
+
+
+# Advanced Usage:
+
+[See Here](https://github.com/bloc97/Anime4K/blob/master/md/GLSL_Instructions_Advanced.md#modes)
 
 
 # Custom Shaders
