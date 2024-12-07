@@ -20,8 +20,8 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 - PySide6
 - FFmpeg with Vulkan support
 - Additional Python libraries:
-        - tqdm
-        - ffmpeg-progress-yield
+  * tqdm
+  * ffmpeg-progress-yield
 
 
 # Installation
