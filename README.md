@@ -51,7 +51,7 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 
 1. Run the application:
    ```
-   python main.py
+   python PyAnime4K.py
    ```
 2. Use the GUI to:
    * Edit Configuration: Open the Config.ini file for adjustments.
