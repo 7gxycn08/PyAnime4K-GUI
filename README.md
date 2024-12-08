@@ -69,6 +69,18 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 [Click Here for Shader Details](https://github.com/bloc97/Anime4K/blob/master/md/GLSL_Instructions_Advanced.md#modes)
 Shaders for upscaling are located in the `shaders/` directory. Modify or add your shaders as needed and reference It in `Resources/Config.ini` file.
 
+You can use your own custom shader combinations example:
+
+
+`Anime4K_ModeA+FSR.glsl` This uses FSR upscaling instead of Anime4K upscaler shader.
+```
+Anime4K_Restore_CNN_UL.glsl
+FSR.glsl
+Anime4K_AutoDownscalePre_x2.glsl
+Anime4K_AutoDownscalePre_x4.glsl
+FSR.glsl
+```
+
 
 # License
 
