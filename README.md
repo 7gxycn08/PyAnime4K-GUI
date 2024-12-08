@@ -13,6 +13,7 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 4. Log Viewer: View live progress in the GUI and ffmpeg stderr in output.txt file.
 5. Cancel Operations: Cancel ongoing upscaling tasks at any time.
 6. Output Folder Access: Quickly navigate to the output folder.
+7. Multiple Subtitle Stream Copy: Includes all subtitle streams from input file. 
 
 
 # Requirements
@@ -44,7 +45,7 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
     bit_rate = 10M
     preset = slow
     codec = hevc_amf
-    shader = Anime4K_ModeA+A.glsl
+    shader = Anime4k-ModeA+A-UL.glsl
    ```
 
 # Usage
