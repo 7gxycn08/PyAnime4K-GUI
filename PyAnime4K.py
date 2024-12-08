@@ -1,13 +1,14 @@
 import os
 import sys
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QFileDialog,
-                               QMainWindow)
+                               QMainWindow, QMessageBox)
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt
 from ffmpeg_progress_yield import FfmpegProgress
 from tqdm import tqdm
 import subprocess
 import configparser
+import winsound
 
 
 class MainWindow(QMainWindow):
@@ -15,6 +16,7 @@ class MainWindow(QMainWindow):
     progress_signal = Signal()
     success_signal = Signal()
     error_signal = Signal()
+    error_box_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -31,8 +33,10 @@ class MainWindow(QMainWindow):
         self.progress_msg = None
         self.error_msg = None
         self.output_dir = None
+        self.exception_msg = None
         self.error_signal.connect(self.err_msg_handler)
         self.progress_signal.connect(self.update_progress)
+        self.error_box_signal.connect(self.error_box)
 
         # Create a central widget
         central_widget = QWidget(self)
@@ -75,6 +79,7 @@ class MainWindow(QMainWindow):
 
 
     def thread_check(self):
+        self.cancel_encode = False
         if self.pass_param_thread.isRunning():
             return
         else:
@@ -115,31 +120,42 @@ class MainWindow(QMainWindow):
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
 
     def start_encoding(self, process):
-        # noinspection SpellCheckingInspection
-        with tqdm(total=100, position=1, desc="Progress") as pbar:
+        try:
             # noinspection SpellCheckingInspection
-            for progress in process.run_command_with_progress(popen_kwargs={"creationflags" :
-                                                                                subprocess.CREATE_NO_WINDOW}):
-                if self.cancel_encode:
-                    process.quit()
-                    # noinspection SpellCheckingInspection
-                    self.log_widget.append("Upscaling Canceled.")
-                    break
-                pbar.update(progress - pbar.n)
+            with tqdm(total=100, position=1, desc="Progress") as pbar:
                 # noinspection SpellCheckingInspection
-                tqdm_line = pbar.format_meter(
-                    n=pbar.n,
-                    total=pbar.total,
-                    elapsed=pbar.format_dict['elapsed'],
-                    ncols=80,
-                )
-                self.progress_msg = tqdm_line
-                self.progress_signal.emit()
-        self.error_msg = str(process.stderr)
-        self.error_signal.emit()
+                for progress in process.run_command_with_progress(popen_kwargs={"creationflags" :
+                                                                                    subprocess.CREATE_NO_WINDOW}):
+                    if self.cancel_encode:
+                        process.quit()
+                        # noinspection SpellCheckingInspection
+                        self.log_widget.append("Upscaling Canceled.")
+                        break
+                    pbar.update(progress - pbar.n)
+                    # noinspection SpellCheckingInspection
+                    tqdm_line = pbar.format_meter(
+                        n=pbar.n,
+                        total=pbar.total,
+                        elapsed=pbar.format_dict['elapsed'],
+                        ncols=80,
+                    )
+                    self.progress_msg = tqdm_line
+                    self.progress_signal.emit()
+        except Exception as e:
+            self.exception_msg = e
+            self.cancel_encode = True
+            self.error_box_signal.emit()
+        finally:
+            self.error_msg = str(process.stderr)
+            self.error_signal.emit()
+            subprocess.call(
+                ["taskkill", "/F", "/IM", "ffmpeg.exe"],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
 
     def pass_param(self):
-        self.cancel_encode = False
+        if self.cancel_encode:
+            return
         config = configparser.ConfigParser()
         config.read('Resources/Config.ini')
         width = config['Settings']['width']
@@ -149,6 +165,8 @@ class MainWindow(QMainWindow):
         codec = config['Settings']['codec']
         shader = config['Settings']['shader']
         for file in self.selected_files:
+            sys.stdout.flush()
+            sys.stderr.flush()
             # noinspection SpellCheckingInspection
             command = [
                 "ffmpeg/ffmpeg.exe",
@@ -159,7 +177,7 @@ class MainWindow(QMainWindow):
                 "-vf", f"format=yuv420p,hwupload,"
                 f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader},"
                 "format=yuv420p",
-                "-map", "0", "-c:a", "copy", "-c:d", "copy",
+                "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", "20M", "-bufsize", "40M",
                 "-c:v", f"{codec}", "-preset", f"{preset}",
                 f"{self.output_dir}\\{os.path.basename(file).strip('.mkv')}-upscaled.mkv"
@@ -172,6 +190,21 @@ class MainWindow(QMainWindow):
             self.encode_thread.run = lambda: self.start_encoding(process)
             self.encode_thread.start()
             self.encode_thread.wait()
+
+    def error_box(self):
+        warning_message_box = QMessageBox(self)
+        warning_message_box.setIcon(QMessageBox.Icon.Critical)
+        warning_message_box.setWindowTitle("PyAnime4K-GUI Error")
+        warning_message_box.setWindowIcon(QIcon(r"Resources\anime.ico"))
+        warning_message_box.setFixedSize(400, 200)
+        warning_message_box.setText(f"{self.exception_msg}")
+        winsound.MessageBeep()
+        screen = app.primaryScreen()
+        screen_geometry = screen.availableGeometry()
+        x = (screen_geometry.width() - warning_message_box.width()) // 2
+        y = (screen_geometry.height() - warning_message_box.height()) // 2
+        warning_message_box.move(x, y)
+        warning_message_box.exec()
 
     def append_ascii_art(self):
         ascii_art = """
