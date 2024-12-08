@@ -8,7 +8,7 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 # Features
 
 1. Batch Video Upscaling: Select multiple video files for upscaling which will be saved to disk.
-2. Configurable Settings: Customize output dimensions, bitrate, codec, and shaders via a config file using a text editor.
+2. Configurable Settings: Customize output `dimensions`, `bitrate`, `codec`, and `shaders` via a config file using a text editor.
 3. Real-Time Progress: Monitor upscaling progress with a visual progress bar.
 4. Log Viewer: View live progress in the GUI and ffmpeg stderr in output.txt file.
 5. Cancel Operations: Cancel ongoing upscaling tasks at any time.
