@@ -18,7 +18,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.0")
+        self.setWindowTitle("PyAnime4K-GUI v1.1")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -30,6 +30,7 @@ class MainWindow(QMainWindow):
         self.cancel_encode = False
         self.progress_msg = None
         self.error_msg = None
+        self.output_dir = None
         self.error_signal.connect(self.err_msg_handler)
         self.progress_signal.connect(self.update_progress)
 
@@ -83,7 +84,8 @@ class MainWindow(QMainWindow):
         os.startfile(f"{os.getcwd()}/Resources/Config.ini")
 
     def open_output_folder(self): # noqa
-        os.startfile(f"{os.getcwd()}/output")
+        if self.output_dir:
+            os.startfile(f"{self.output_dir}")
 
     def cancel_operation(self):
         self.cancel_encode = True
@@ -98,6 +100,9 @@ class MainWindow(QMainWindow):
             self.selected_files = file_paths
             for file in self.selected_files:
                 self.log_widget.append(f"[Added] - {file}")
+        output_path = QFileDialog.getExistingDirectory(None, "Select Output Directory")
+        if output_path:
+            self.output_dir = output_path
 
     def update_progress(self):
         # noinspection SpellCheckingInspection
@@ -154,10 +159,10 @@ class MainWindow(QMainWindow):
                 "-vf", f"format=yuv420p,hwupload,"
                 f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader},"
                 "format=yuv420p",
-                "-c:a", "copy", "-c:s", "copy", "-c:d", "copy",
+                "-map", "0", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", "20M", "-bufsize", "40M",
                 "-c:v", f"{codec}", "-preset", f"{preset}",
-                f"{os.getcwd()}\\output\\{os.path.basename(file).strip('.mkv')}-upscaled.mkv"
+                f"{self.output_dir}\\{os.path.basename(file).strip('.mkv')}-upscaled.mkv"
             ]
             if self.cancel_encode:
                 break
