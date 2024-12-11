@@ -1,3 +1,4 @@
 PySide6
 ffmpeg_progress_yield
 tqdm
+Opencv-Python
