@@ -9,6 +9,8 @@ from tqdm import tqdm
 import subprocess
 import configparser
 import winsound
+import cv2
+
 
 
 class MainWindow(QMainWindow):
@@ -27,6 +29,7 @@ class MainWindow(QMainWindow):
         self.std_thread = QThread()
         self.encode_thread = QThread()
         self.pass_param_thread = QThread()
+        self.compare_thread = QThread()
         self.current_file = None
         self.process = None
         self.cancel_encode = False
@@ -34,6 +37,9 @@ class MainWindow(QMainWindow):
         self.error_msg = None
         self.output_dir = None
         self.exception_msg = None
+        self.paused = False
+        self.combined = None
+        self.split_pos = None
         self.error_signal.connect(self.err_msg_handler)
         self.progress_signal.connect(self.update_progress)
         self.error_box_signal.connect(self.error_box)
@@ -55,6 +61,7 @@ class MainWindow(QMainWindow):
 
         # Create buttons
         self.edit_button = QPushButton("Edit Config File")
+        self.compare_button = QPushButton("Compare Videos")
         self.select_button = QPushButton("Select Video Files")
         self.output_button = QPushButton("Open Output Folder")
         self.upscale_button = QPushButton("Upscale")
@@ -62,6 +69,7 @@ class MainWindow(QMainWindow):
 
         # Add buttons to the layout
         layout.addWidget(self.edit_button)
+        layout.addWidget(self.compare_button)
         layout.addWidget(self.select_button)
         layout.addWidget(self.output_button)
         layout.addWidget(self.upscale_button)
@@ -69,6 +77,7 @@ class MainWindow(QMainWindow):
 
         self.pass_param_thread.run = self.pass_param
         # Connect button clicks to log messages
+        self.compare_button.clicked.connect(self.compare_selection)
         self.edit_button.clicked.connect(self.open_config)
         self.select_button.clicked.connect(self.open_file_dialog)
         self.output_button.clicked.connect(self.open_output_folder)
@@ -76,6 +85,15 @@ class MainWindow(QMainWindow):
         self.cancel_button.clicked.connect(self.cancel_operation)
         open("output.txt", "w").close()
         self.append_ascii_art()
+
+    def compare_selection(self):
+        first, _ = QFileDialog.getOpenFileName(self, "Select First Video", "", "Video File (*.mkv)")
+        if first:
+            second, _ = QFileDialog.getOpenFileName(self, "Select Second Video", "",
+                                                    "Video File (*.mkv)")
+            if first and second:
+                self.compare_thread.run = lambda: self.compare_videos_side_by_side(first, second)
+                self.compare_thread.start()
 
 
     def thread_check(self):
@@ -99,7 +117,7 @@ class MainWindow(QMainWindow):
         self.log_widget.append(message)
 
     def open_file_dialog(self):
-        file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files", "", "Text Files (*.mkv)")
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files", "", "Video Files (*.mkv)")
         if file_paths:
             self.log_widget.clear()
             self.selected_files = file_paths
@@ -205,6 +223,65 @@ class MainWindow(QMainWindow):
         y = (screen_geometry.height() - warning_message_box.height()) // 2
         warning_message_box.move(x, y)
         warning_message_box.exec()
+
+    def compare_videos_side_by_side(self, video1_path, video2_path):
+        def update_split(val):
+            self.split_pos = val
+            if self.paused:
+                update_frame()
+
+        def update_frame():
+            frame1_resized = cv2.resize(frame1, (width, height))
+            frame2_resized = cv2.resize(frame2, (width, height))
+            self.combined = frame1_resized.copy()
+            self.combined[:, self.split_pos:] = frame2_resized[:, self.split_pos:]
+            cv2.line(self.combined, (self.split_pos, 0), (self.split_pos, height), (0, 255, 0),
+                     2)
+
+        try:
+            cap1 = cv2.VideoCapture(video1_path)
+            cap2 = cv2.VideoCapture(video2_path)
+
+            if not cap1.isOpened() or not cap2.isOpened():
+                raise Exception
+
+            width = 1920 #int(max(cap1.get(cv2.CAP_PROP_FRAME_WIDTH), cap2.get(cv2.CAP_PROP_FRAME_WIDTH)))
+            height = 1080 #int(max(cap1.get(cv2.CAP_PROP_FRAME_HEIGHT), cap2.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            fps = 60
+
+            window_name = "Video Comparison"
+            self.split_pos = width // 2
+
+            cv2.namedWindow(window_name)
+            cv2.setNumThreads(os.cpu_count())
+            cv2.createTrackbar("Split", window_name, self.split_pos, width, update_split)
+
+            frame1, frame2 = None, None
+
+            while True:
+                if not self.paused:
+                    ret1, frame1 = cap1.read()
+                    ret2, frame2 = cap2.read()
+
+                    if not ret1 or not ret2:
+                        break
+
+                    update_frame()
+
+                cv2.imshow(window_name, self.combined)
+
+                key = cv2.waitKey(int(1000 / fps)) & 0xFF
+                if key == 27 or cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1: # Esc key or window closed
+                    break
+                elif key == ord(' '):  # Space key
+                    self.paused = not self.paused
+
+            cap1.release()
+            cap2.release()
+            cv2.destroyAllWindows()
+        except Exception as e:
+            self.exception_msg = e
+            self.error_box_signal.emit()
 
     def append_ascii_art(self):
         ascii_art = """
