@@ -1,4 +1,4 @@
-![pyanime4k](https://github.com/user-attachments/assets/c4ff1be9-b2d7-4643-9ec3-573db7ff0b80)
+![11](https://github.com/user-attachments/assets/3ee84df8-78b3-49f7-9982-4a94c9503819)
 
 ## PyAnime4K-GUI
 
@@ -13,12 +13,14 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 4. Log Viewer: View live progress in the GUI and ffmpeg stderr in output.txt file.
 5. Cancel Operations: Cancel ongoing upscaling tasks at any time.
 6. Output Folder Access: Quickly navigate to the output folder.
-7. Multiple Subtitle Stream Copy: Includes all subtitle streams from input file. 
+7. Multiple Subtitle Stream Copy: Includes all subtitle streams from input file.
+8. Compare Two Videos Side-by-Side: Video compare function that display quality changes in real-time.
 
 
 # Requirements
 - Python 3.9+
 - PySide6
+- Opencv-Python
 - FFmpeg with Vulkan support
 - Additional Python libraries:
   * tqdm
