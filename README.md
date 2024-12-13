@@ -39,7 +39,7 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
    pip install -r requirements.txt
    ```
 3. Place the required ffmpeg.exe and ffprobe.exe in the `ffmpeg/` folder.
-4. Ensure the `Resources/Config.ini` file contains your desired settings:
+4. Ensure the `Resources/Config.ini` file contains your desired settings. You can open `Config.ini` directly from the GUI.:
    ```
     [Settings]
     width = 3840
