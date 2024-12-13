@@ -74,17 +74,17 @@ Shaders for upscaling are located in the `shaders/` directory. Modify or add you
 You can use your own custom shader combinations example:
 
 
-`Anime4K-R+DTD+U+R+DTD+U.glsl` This combination takes 10 minutes to upscale an episode to 4K on a `RX7900xtx` gpu.
+`Anime4K-R+DTD+U+R+DTD+U.glsl` This combination takes 10 minutes to 2-pass upscale an episode to 4K on a `RX7900xtx` gpu.
 ```
 # Included shaders:
 Anime4K_Restore_CNN_UL.glsl
-Anime4K_Upscale_DTD_x2.glsl
+Anime4K_Upscale_DTD_x2.glsl            # Pass-1
 Anime4K_Upscale_CNN_x2_UL.glsl
-Anime4K_Restore_CNN_UL.glsl
 Anime4K_AutoDownscalePre_x2.glsl
 Anime4K_AutoDownscalePre_x4.glsl
-Anime4K_Upscale_DTD_x2.glsl
-Anime4K_Upscale_CNN_UL_x2.glsl
+Anime4K_Restore_CNN_UL.glsl
+Anime4K_Upscale_DTD_x2.glsl            # Pass-2
+Anime4K_Upscale_CNN_x2_UL.glsl
 ```
 
 
