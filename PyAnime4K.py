@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.1")
+        self.setWindowTitle("PyAnime4K-GUI v1.3")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -117,15 +117,29 @@ class MainWindow(QMainWindow):
         self.log_widget.append(message)
 
     def open_file_dialog(self):
-        file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files", "", "Video Files (*.mkv)")
+        file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files", "",
+                                                     "Video Files (*.mkv *.mp4)")
         if file_paths:
             self.log_widget.clear()
             self.selected_files = file_paths
             for file in self.selected_files:
                 self.log_widget.append(f"[Added] - {file}")
+
+        else:
+            self.log_widget.clear()
+            self.log_widget.append(f"File selection canceled.")
+            return
+
         output_path = QFileDialog.getExistingDirectory(None, "Select Output Directory")
         if output_path:
             self.output_dir = output_path
+            self.activateWindow()
+
+        else:
+            self.selected_files = None
+            self.log_widget.clear()
+            self.log_widget.append(f"File selection canceled.")
+            self.activateWindow()
 
     def update_progress(self):
         # noinspection SpellCheckingInspection
@@ -179,7 +193,6 @@ class MainWindow(QMainWindow):
         width = config['Settings']['width']
         height = config['Settings']['height']
         bit_rate = config['Settings']['bit_rate']
-        preset = config['Settings']['preset']
         codec = config['Settings']['codec']
         shader = config['Settings']['shader']
         for file in self.selected_files:
@@ -194,10 +207,10 @@ class MainWindow(QMainWindow):
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
                 f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader},"
-                "format=yuv420p",
+                f"format=yuv420p",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", "20M", "-bufsize", "40M",
-                "-c:v", f"{codec}", "-preset", f"{preset}",
+                "-c:v", f"{codec}",
                 f"{self.output_dir}\\{os.path.basename(file).strip('.mkv')}-upscaled.mkv"
             ]
             if self.cancel_encode:
