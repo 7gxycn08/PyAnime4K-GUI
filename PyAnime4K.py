@@ -12,7 +12,6 @@ import winsound
 import cv2
 
 
-
 class MainWindow(QMainWindow):
     output_signal = Signal(str)
     progress_signal = Signal()
@@ -22,7 +21,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.3")
+        self.setWindowTitle("PyAnime4K-GUI v1.4")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -95,7 +94,6 @@ class MainWindow(QMainWindow):
                 self.compare_thread.run = lambda: self.compare_videos_side_by_side(first, second)
                 self.compare_thread.start()
 
-
     def thread_check(self):
         self.cancel_encode = False
         if self.pass_param_thread.isRunning():
@@ -103,10 +101,10 @@ class MainWindow(QMainWindow):
         else:
             self.pass_param_thread.start()
 
-    def open_config(self): # noqa
+    def open_config(self):  # noqa
         os.startfile(f"{os.getcwd()}/Resources/Config.ini")
 
-    def open_output_folder(self): # noqa
+    def open_output_folder(self):  # noqa
         if self.output_dir:
             os.startfile(f"{self.output_dir}")
 
@@ -152,11 +150,12 @@ class MainWindow(QMainWindow):
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
 
     def start_encoding(self, process):
+        # noinspection PyBroadException
         try:
             # noinspection SpellCheckingInspection
             with tqdm(total=100, position=1, desc="Progress") as pbar:
                 # noinspection SpellCheckingInspection
-                for progress in process.run_command_with_progress(popen_kwargs={"creationflags" :
+                for progress in process.run_command_with_progress(popen_kwargs={"creationflags":
                                                                                     subprocess.CREATE_NO_WINDOW}):
                     if self.cancel_encode:
                         process.quit()
@@ -173,8 +172,8 @@ class MainWindow(QMainWindow):
                     )
                     self.progress_msg = tqdm_line
                     self.progress_signal.emit()
-        except Exception as e:
-            self.exception_msg = e
+        except:
+            self.exception_msg = "Failed to run command check output.txt"
             self.cancel_encode = True
             self.error_box_signal.emit()
         finally:
@@ -202,12 +201,11 @@ class MainWindow(QMainWindow):
             command = [
                 "ffmpeg/ffmpeg.exe",
                 "-progress", "pipe:1",
-                "-hide_banner", "-y", "-hwaccel_device", "opencl",
+                "-hide_banner", "-y",
                 "-i", f"{file}",
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
-                f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader},"
-                f"format=yuv420p",
+                       f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", "20M", "-bufsize", "40M",
                 "-c:v", f"{codec}",
@@ -258,8 +256,10 @@ class MainWindow(QMainWindow):
             if not cap1.isOpened() or not cap2.isOpened():
                 raise Exception
 
-            width = 1920 #int(max(cap1.get(cv2.CAP_PROP_FRAME_WIDTH), cap2.get(cv2.CAP_PROP_FRAME_WIDTH)))
-            height = 1080 #int(max(cap1.get(cv2.CAP_PROP_FRAME_HEIGHT), cap2.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            config = configparser.ConfigParser()
+            config.read('Resources/Config.ini')
+            width = int(config['Settings']['width'])
+            height = int(config['Settings']['height'])
             fps = 60
 
             window_name = "Video Comparison"
@@ -284,7 +284,8 @@ class MainWindow(QMainWindow):
                 cv2.imshow(window_name, self.combined)
 
                 key = cv2.waitKey(int(1000 / fps)) & 0xFF
-                if key == 27 or cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1: # Esc key or window closed
+                if key == 27 or cv2.getWindowProperty(window_name,
+                                                      cv2.WND_PROP_VISIBLE) < 1:  # Esc key or window closed
                     break
                 elif key == ord(' '):  # Space key
                     self.paused = not self.paused
@@ -334,6 +335,7 @@ class MainWindow(QMainWindow):
         cursor.insertBlock(block_format)
         cursor.insertText(ascii_art)
         self.log_widget.setTextCursor(cursor)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
