@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.4")
+        self.setWindowTitle("PyAnime4K-GUI v1.5")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -203,6 +203,9 @@ class MainWindow(QMainWindow):
                 "-progress", "pipe:1",
                 "-hide_banner", "-y",
                 "-i", f"{file}",
+                "-map", "0:v",
+                "-map", "0:a",
+                "-map", "0:s",
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
