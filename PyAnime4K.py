@@ -5,11 +5,12 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt
 from ffmpeg_progress_yield import FfmpegProgress
-from tqdm import tqdm
+from tqdm.asyncio import tqdm
 import subprocess
 import configparser
 import winsound
 import cv2
+import asyncio
 
 
 class MainWindow(QMainWindow):
@@ -29,6 +30,8 @@ class MainWindow(QMainWindow):
         self.encode_thread = QThread()
         self.pass_param_thread = QThread()
         self.compare_thread = QThread()
+        self.progress_thread = QThread()
+        self.ffmpeg_progress = None
         self.current_file = None
         self.process = None
         self.cancel_encode = False
@@ -149,40 +152,48 @@ class MainWindow(QMainWindow):
         # noinspection SpellCheckingInspection
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
 
-    def start_encoding(self, process):
+    async def start_encoding(self, process):
         # noinspection PyBroadException
         try:
-            # noinspection SpellCheckingInspection
-            with tqdm(total=100, position=1, desc="Progress") as pbar:
-                # noinspection SpellCheckingInspection
-                for progress in process.run_command_with_progress(popen_kwargs={"creationflags":
+            pbar = tqdm(total=100, position=1, desc="Progress")
+            async for progress in process.async_run_command_with_progress(popen_kwargs={"bufsize": 0,"creationflags":
                                                                                     subprocess.CREATE_NO_WINDOW}):
-                    if self.cancel_encode:
-                        process.quit()
-                        # noinspection SpellCheckingInspection
-                        self.log_widget.append("Upscaling Canceled.")
-                        break
-                    pbar.update(progress - pbar.n)
+                if self.cancel_encode:
+                    process.quit()
                     # noinspection SpellCheckingInspection
-                    tqdm_line = pbar.format_meter(
-                        n=pbar.n,
-                        total=pbar.total,
-                        elapsed=pbar.format_dict['elapsed'],
-                        ncols=80,
-                    )
-                    self.progress_msg = tqdm_line
-                    self.progress_signal.emit()
-        except:
-            self.exception_msg = "Failed to run command check output.txt"
+                    self.log_widget.append("Upscaling Canceled.")
+                    break
+                pbar.update(progress - pbar.n)
+                tqdm_line = pbar.format_meter(
+                    n=pbar.n,
+                    total=pbar.total,
+                    elapsed=pbar.format_dict['elapsed'],
+                    ncols=80,
+                )
+                self.progress_msg = tqdm_line
+                self.progress_signal.emit()
+                pbar.refresh()
+            pbar.close()
+
+        except Exception as e:
+            self.exception_msg = e
             self.cancel_encode = True
             self.error_box_signal.emit()
         finally:
             self.error_msg = str(process.stderr)
             self.error_signal.emit()
-            subprocess.call(
-                ["taskkill", "/F", "/IM", "ffmpeg.exe"],
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
+            # noinspection PyBroadException
+            try:
+                subprocess.call(
+                    ["taskkill", "/F", "/IM", "ffmpeg.exe"],
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+            except:
+                return
+
+    async def start_encoding_entry(self, process):
+        await self.start_encoding(process)
+
 
     def pass_param(self):
         if self.cancel_encode:
@@ -200,12 +211,11 @@ class MainWindow(QMainWindow):
             # noinspection SpellCheckingInspection
             command = [
                 "ffmpeg/ffmpeg.exe",
-                "-progress", "pipe:1",
-                "-hide_banner", "-y",
+                "-loglevel", "error",
                 "-i", f"{file}",
                 "-map", "0:v",
-                "-map", "0:a",
                 "-map", "0:s",
+                "-map", "0:a",
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
@@ -219,7 +229,7 @@ class MainWindow(QMainWindow):
             self.current_file = file
             process = FfmpegProgress(command)
             self.cancel_encode = False
-            self.encode_thread.run = lambda: self.start_encoding(process)
+            self.encode_thread.run = lambda: asyncio.run(self.start_encoding_entry(process))
             self.encode_thread.start()
             self.encode_thread.wait()
 
