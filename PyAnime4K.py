@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.5")
+        self.setWindowTitle("PyAnime4K-GUI v1.6")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -155,15 +155,18 @@ class MainWindow(QMainWindow):
     async def start_encoding(self, process):
         # noinspection PyBroadException
         try:
+            # noinspection SpellCheckingInspection
             pbar = tqdm(total=100, position=1, desc="Progress")
-            async for progress in process.async_run_command_with_progress(popen_kwargs={"bufsize": 0,"creationflags":
+            # noinspection SpellCheckingInspection
+            async for progress in process.async_run_command_with_progress(popen_kwargs={"creationflags":
                                                                                     subprocess.CREATE_NO_WINDOW}):
                 if self.cancel_encode:
-                    process.quit()
+                    await process.async_quit_gracefully()
                     # noinspection SpellCheckingInspection
                     self.log_widget.append("Upscaling Canceled.")
                     break
                 pbar.update(progress - pbar.n)
+                # noinspection SpellCheckingInspection
                 tqdm_line = pbar.format_meter(
                     n=pbar.n,
                     total=pbar.total,
@@ -178,12 +181,10 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.exception_msg = e
             self.cancel_encode = True
-            self.error_box_signal.emit()
-        finally:
             self.error_msg = str(process.stderr)
-            self.error_signal.emit()
-            # noinspection PyBroadException
+            self.error_box_signal.emit()
             try:
+                # noinspection SpellCheckingInspection
                 subprocess.call(
                     ["taskkill", "/F", "/IM", "ffmpeg.exe"],
                     creationflags=subprocess.CREATE_NO_WINDOW
@@ -211,12 +212,13 @@ class MainWindow(QMainWindow):
             # noinspection SpellCheckingInspection
             command = [
                 "ffmpeg/ffmpeg.exe",
-                "-loglevel", "error",
+                "-loglevel", "info",
                 "-i", f"{file}",
                 "-map", "0:v",
                 "-map", "0:s",
                 "-map", "0:a",
                 "-init_hw_device", "vulkan",
+                "-smart_access_video", "True",
                 "-vf", f"format=yuv420p,hwupload,"
                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
