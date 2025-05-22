@@ -218,7 +218,6 @@ class MainWindow(QMainWindow):
                 "-map", "0:s",
                 "-map", "0:a",
                 "-init_hw_device", "vulkan",
-                "-smart_access_video", "True",
                 "-vf", f"format=yuv420p,hwupload,"
                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
