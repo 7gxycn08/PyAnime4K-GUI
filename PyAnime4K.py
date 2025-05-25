@@ -11,6 +11,7 @@ import configparser
 import winsound
 import cv2
 import asyncio
+import pywinstyles
 
 
 class MainWindow(QMainWindow):
@@ -62,12 +63,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.log_widget)
 
         # Create buttons
-        self.edit_button = QPushButton("Edit Config File")
-        self.compare_button = QPushButton("Compare Videos")
-        self.select_button = QPushButton("Select Video Files")
-        self.output_button = QPushButton("Open Output Folder")
-        self.upscale_button = QPushButton("Upscale")
-        self.cancel_button = QPushButton("Cancel")
+        self.edit_button = QPushButton("⚙️Edit Config File")
+        self.compare_button = QPushButton("🎬Compare Videos")
+        self.select_button = QPushButton("📁Select Video Files")
+        self.output_button = QPushButton("📤Open Output Folder")
+        self.upscale_button = QPushButton("🟢Upscale")
+        self.cancel_button = QPushButton("🛑Cancel")
 
         # Add buttons to the layout
         layout.addWidget(self.edit_button)
@@ -355,18 +356,20 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyleSheet("""
             QTextEdit {
-                background-color: #2b2d30;
+                background-color: #26282e;
                 border: none;
             }
             QPushButton {
-                background-color: #2b2d30;
+                background-color: #26282e;
             }
             QPushButton:hover {
-                border-style: inset;
+                border-radius: 5px;
                 border-width: 2px;
-                background-color: #61646e;
+                background-color: #906e27;
             }
         """)
     window = MainWindow()
+    pywinstyles.apply_style(window, "mica")
+    pywinstyles.change_border_color(window, color="#906e27")
     window.show()
     app.exec()
