@@ -1,4 +1,5 @@
-![11](https://github.com/user-attachments/assets/3ee84df8-78b3-49f7-9982-4a94c9503819)
+
+![1 6 (Pyanime4k)](https://github.com/user-attachments/assets/f8b7ced0-5c62-420e-b37d-64cc3c69a8ed)
 
 ## PyAnime4K-GUI
 
