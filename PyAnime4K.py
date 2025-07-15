@@ -12,6 +12,7 @@ import winsound
 import cv2
 import asyncio
 import pywinstyles
+import ctypes
 
 
 class MainWindow(QMainWindow):
@@ -23,7 +24,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.6")
+        self.setWindowTitle("PyAnime4K-GUI v1.7")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -105,6 +106,42 @@ class MainWindow(QMainWindow):
         else:
             self.pass_param_thread.start()
 
+    def closeEvent(self, event):
+        if self.exit_confirm_box() == QMessageBox.StandardButton.Yes:
+            self.cancel_encode = True
+            self.encode_thread.wait()
+            try:
+                if self.is_ffmpeg_running():
+                    # noinspection SpellCheckingInspection
+                    subprocess.call(
+                        ["taskkill", "/F", "/IM", "ffmpeg.exe"],
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+                    event.accept()
+            except Exception as e:
+                print(e)
+                event.accept()
+            event.accept()
+        else:
+            event.ignore()
+
+    def exit_confirm_box(self):
+        exit_message_box = QMessageBox(self)
+        exit_message_box.setIcon(QMessageBox.Icon.Question)
+        exit_message_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        exit_message_box.setWindowTitle("PyAnime4K-GUI")
+        exit_message_box.setWindowIcon(QIcon(r"Resources\anime.ico"))
+        exit_message_box.setFixedSize(400, 200)
+        exit_message_box.setText(f"Do you want to exit PyAnime4K-GUI?")
+        winsound.MessageBeep()
+        screen = app.primaryScreen()
+        screen_geometry = screen.availableGeometry()
+        x = (screen_geometry.width() - exit_message_box.width()) // 2
+        y = (screen_geometry.height() - exit_message_box.height()) // 2
+        exit_message_box.move(x, y)
+        result = exit_message_box.exec()
+        return result
+
     def open_config(self):  # noqa
         os.startfile(f"{os.getcwd()}/Resources/Config.ini")
 
@@ -185,13 +222,48 @@ class MainWindow(QMainWindow):
             self.error_msg = str(process.stderr)
             self.error_box_signal.emit()
             try:
-                # noinspection SpellCheckingInspection
-                subprocess.call(
-                    ["taskkill", "/F", "/IM", "ffmpeg.exe"],
-                    creationflags=subprocess.CREATE_NO_WINDOW
-                )
-            except:
+                if self.is_ffmpeg_running():
+                    # noinspection SpellCheckingInspection
+                    subprocess.call(
+                        ["taskkill", "/F", "/IM", "ffmpeg.exe"],
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    )
+            except FileNotFoundError:
                 return
+
+    def is_ffmpeg_running(self):
+        process_query_limited_information = 0x1000
+
+        process_names = "ffmpeg.exe"
+        try:
+            processes = (ctypes.c_ulong * 2048)() # noqa
+            cb = ctypes.c_ulong(ctypes.sizeof(processes))
+            ctypes.windll.psapi.EnumProcesses(ctypes.byref(processes), cb, ctypes.byref(cb))
+
+            process_count = cb.value // ctypes.sizeof(ctypes.c_ulong)
+            for i in range(process_count):
+                process_id = processes[i]
+                process_handle = ctypes.windll.kernel32.OpenProcess(process_query_limited_information, False,
+                                                                    process_id)
+
+                if process_handle:
+                    buffer_size = 260
+                    buffer = ctypes.create_unicode_buffer(buffer_size)
+                    success = ctypes.windll.kernel32.QueryFullProcessImageNameW(process_handle, 0, buffer,
+                                                                                ctypes.byref(
+                                                                                    ctypes.c_ulong(buffer_size)))
+                    ctypes.windll.kernel32.CloseHandle(process_handle)
+
+                    if success:
+                        process_name_actual = os.path.basename(buffer.value)
+                        if process_name_actual in process_names:
+                            return True
+            return False
+
+        except Exception as e:
+            self.exception_msg = e
+            self.error_box_signal.emit()
+            return False
 
     async def start_encoding_entry(self, process):
         await self.start_encoding(process)
@@ -216,7 +288,7 @@ class MainWindow(QMainWindow):
                 "-loglevel", "info",
                 "-i", f"{file}",
                 "-map", "0:v",
-                "-map", "0:s",
+                "-map", "0:s?",
                 "-map", "0:a",
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
@@ -224,7 +296,7 @@ class MainWindow(QMainWindow):
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", "20M", "-bufsize", "40M",
                 "-c:v", f"{codec}",
-                f"{self.output_dir}\\{os.path.basename(file).strip('.mkv')}-upscaled.mkv"
+                f"{self.output_dir}\\{os.path.basename(file).removesuffix(".mkv").removesuffix(".mp4")}-upscaled.mkv"
             ]
             if self.cancel_encode:
                 break
