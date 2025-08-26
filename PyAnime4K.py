@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.7")
+        self.setWindowTitle("PyAnime4K-GUI v1.8")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -187,6 +187,7 @@ class MainWindow(QMainWindow):
     def err_msg_handler(self):
         with open("output.txt", "a") as file:
             file.write(self.error_msg + "\n")
+            print(self.error_msg)
         # noinspection SpellCheckingInspection
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
 
@@ -238,21 +239,30 @@ class MainWindow(QMainWindow):
         try:
             processes = (ctypes.c_ulong * 2048)() # noqa
             cb = ctypes.c_ulong(ctypes.sizeof(processes))
-            ctypes.windll.psapi.EnumProcesses(ctypes.byref(processes), cb, ctypes.byref(cb))
+            # noinspection SpellCheckingInspection
+            ps_api = ctypes.WinDLL('Psapi.dll')
+            enum_processes = ps_api.EnumProcesses
 
+            enum_processes(ctypes.byref(processes), cb, ctypes.byref(cb))
             process_count = cb.value // ctypes.sizeof(ctypes.c_ulong)
+
             for i in range(process_count):
                 process_id = processes[i]
-                process_handle = ctypes.windll.kernel32.OpenProcess(process_query_limited_information, False,
+                kernel32 = ctypes.WinDLL('kernel32.dll')
+                open_process = kernel32.OpenProcess
+
+                process_handle = open_process(process_query_limited_information, False,
                                                                     process_id)
 
                 if process_handle:
                     buffer_size = 260
                     buffer = ctypes.create_unicode_buffer(buffer_size)
-                    success = ctypes.windll.kernel32.QueryFullProcessImageNameW(process_handle, 0, buffer,
+                    query_full_process_image_name_w = kernel32.QueryFullProcessImageNameW
+                    success = query_full_process_image_name_w(process_handle, 0, buffer,
                                                                                 ctypes.byref(
                                                                                     ctypes.c_ulong(buffer_size)))
-                    ctypes.windll.kernel32.CloseHandle(process_handle)
+                    close_handle = kernel32.CloseHandle
+                    close_handle(process_handle)
 
                     if success:
                         process_name_actual = os.path.basename(buffer.value)
@@ -264,6 +274,7 @@ class MainWindow(QMainWindow):
             self.exception_msg = e
             self.error_box_signal.emit()
             return False
+
 
     async def start_encoding_entry(self, process):
         await self.start_encoding(process)
@@ -308,12 +319,14 @@ class MainWindow(QMainWindow):
             self.encode_thread.wait()
 
     def error_box(self):
+        with open("output.txt", "a") as file:
+            file.write(str(self.exception_msg) + "\n")
         warning_message_box = QMessageBox(self)
         warning_message_box.setIcon(QMessageBox.Icon.Critical)
         warning_message_box.setWindowTitle("PyAnime4K-GUI Error")
         warning_message_box.setWindowIcon(QIcon(r"Resources\anime.ico"))
         warning_message_box.setFixedSize(400, 200)
-        warning_message_box.setText(f"{self.exception_msg}")
+        warning_message_box.setText(f"Unexpected Error Occurred See Output.txt")
         winsound.MessageBeep()
         screen = app.primaryScreen()
         screen_geometry = screen.availableGeometry()
