@@ -119,7 +119,6 @@ class MainWindow(QMainWindow):
                     )
                     event.accept()
             except Exception as e:
-                print(e)
                 event.accept()
             event.accept()
         else:
@@ -187,7 +186,7 @@ class MainWindow(QMainWindow):
     def err_msg_handler(self):
         with open("output.txt", "a") as file:
             file.write(self.error_msg + "\n")
-            print(self.error_msg)
+            
         # noinspection SpellCheckingInspection
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
 
@@ -457,4 +456,5 @@ if __name__ == "__main__":
     pywinstyles.apply_style(window, "mica")
     pywinstyles.change_border_color(window, color="#906e27")
     window.show()
+
     app.exec()
