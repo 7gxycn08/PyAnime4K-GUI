@@ -46,6 +46,8 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
     width = 3840
     height = 2160
     bit_rate = 10M
+    max_bitrate = 20M
+    buffer_size = 40M
     preset = slow
     codec = hevc_amf # for Nvidia GPU's use hevc_nvenc
     shader = Anime4k-ModeA-UL.glsl
