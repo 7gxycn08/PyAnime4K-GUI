@@ -289,7 +289,7 @@ class MainWindow(QMainWindow):
         height = config['Settings']['height']
         bit_rate = config['Settings']['bit_rate']
         max_bitrate = config['Settings']['max_bitrate']
-        buffer_size = config['Settings']['buf_size']
+        buffer_size = config['Settings']['buffer_size']
         codec = config['Settings']['codec']
         shader = config['Settings']['shader']
         print(max_bitrate)
