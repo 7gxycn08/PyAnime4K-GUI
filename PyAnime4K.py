@@ -119,6 +119,7 @@ class MainWindow(QMainWindow):
                     )
                     event.accept()
             except Exception as e:
+                print(e)
                 event.accept()
             event.accept()
         else:
@@ -186,7 +187,7 @@ class MainWindow(QMainWindow):
     def err_msg_handler(self):
         with open("output.txt", "a") as file:
             file.write(self.error_msg + "\n")
-            
+            print(self.error_msg)
         # noinspection SpellCheckingInspection
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
 
@@ -287,8 +288,11 @@ class MainWindow(QMainWindow):
         width = config['Settings']['width']
         height = config['Settings']['height']
         bit_rate = config['Settings']['bit_rate']
+        max_bitrate = config['Settings']['max_bitrate']
+        buffer_size = config['Settings']['buf_size']
         codec = config['Settings']['codec']
         shader = config['Settings']['shader']
+        print(max_bitrate)
         for file in self.selected_files:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -304,7 +308,7 @@ class MainWindow(QMainWindow):
                 "-vf", f"format=yuv420p,hwupload,"
                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
-                "-b:v", f"{bit_rate}", "-maxrate", "20M", "-bufsize", "40M",
+                "-b:v", f"{bit_rate}", "-maxrate", f"{max_bitrate}", "-bufsize", f"{buffer_size}",
                 "-c:v", f"{codec}",
                 f"{self.output_dir}\\{os.path.basename(file).removesuffix(".mkv").removesuffix(".mp4")}-upscaled.mkv"
             ]
@@ -456,5 +460,4 @@ if __name__ == "__main__":
     pywinstyles.apply_style(window, "mica")
     pywinstyles.change_border_color(window, color="#906e27")
     window.show()
-
     app.exec()
