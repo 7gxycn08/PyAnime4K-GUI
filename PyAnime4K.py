@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v1.8")
+        self.setWindowTitle("PyAnime4K-GUI v1.9")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -283,6 +283,7 @@ class MainWindow(QMainWindow):
     def pass_param(self):
         if self.cancel_encode:
             return
+
         config = configparser.ConfigParser()
         config.read('Resources/Config.ini')
         width = config['Settings']['width']
@@ -292,7 +293,7 @@ class MainWindow(QMainWindow):
         buffer_size = config['Settings']['buffer_size']
         codec = config['Settings']['codec']
         shader = config['Settings']['shader']
-        print(max_bitrate)
+
         for file in self.selected_files:
             sys.stdout.flush()
             sys.stderr.flush()
@@ -306,7 +307,8 @@ class MainWindow(QMainWindow):
                 "-map", "0:a",
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
-                       f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
+                       f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader},"
+                f"hwdownload,format=yuv420p",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", f"{max_bitrate}", "-bufsize", f"{buffer_size}",
                 "-c:v", f"{codec}",
