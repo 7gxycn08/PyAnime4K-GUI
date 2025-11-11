@@ -193,6 +193,7 @@ class MainWindow(QMainWindow):
 
     async def start_encoding(self, process):
         # noinspection PyBroadException
+        last_ffmpeg_progress = 0
         try:
             # noinspection SpellCheckingInspection
             pbar = tqdm(total=100, position=1, desc="Progress")
@@ -203,11 +204,20 @@ class MainWindow(QMainWindow):
                     await process.async_quit_gracefully()
                     # noinspection SpellCheckingInspection
                     self.log_widget.append("Upscaling Canceled.")
-                    break
+                    return
+
+                if progress is not None:
+                    # sent a new progress value
+                    last_ffmpeg_progress = progress
+                    display_progress = round(progress, 2)
+                else:
+                    # stalled: interpolate slowly but **do not exceed last value**
+                    display_progress = min(round(pbar.n + 0.1, 2), round(last_ffmpeg_progress, 2))
+
                 pbar.update(progress - pbar.n)
                 # noinspection SpellCheckingInspection
                 tqdm_line = pbar.format_meter(
-                    n=pbar.n,
+                    n=display_progress,
                     total=pbar.total,
                     elapsed=pbar.format_dict['elapsed'],
                     ncols=80,
@@ -216,7 +226,8 @@ class MainWindow(QMainWindow):
                 self.progress_signal.emit()
                 pbar.refresh()
             pbar.close()
-
+            self.progress_msg = "Upscaling Finished Successfully."
+            self.progress_signal.emit()
         except Exception as e:
             self.exception_msg = e
             self.cancel_encode = True
@@ -307,8 +318,7 @@ class MainWindow(QMainWindow):
                 "-map", "0:a",
                 "-init_hw_device", "vulkan",
                 "-vf", f"format=yuv420p,hwupload,"
-                       f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader},"
-                f"hwdownload,format=yuv420p",
+                       f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
                 "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
                 "-b:v", f"{bit_rate}", "-maxrate", f"{max_bitrate}", "-bufsize", f"{buffer_size}",
                 "-c:v", f"{codec}",
