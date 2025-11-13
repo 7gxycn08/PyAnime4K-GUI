@@ -21,10 +21,11 @@ class MainWindow(QMainWindow):
     success_signal = Signal()
     error_signal = Signal()
     error_box_signal = Signal()
+    f_probe_signal = Signal()
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v2.0")
+        self.setWindowTitle("PyAnime4K-GUI v2.1")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -45,11 +46,11 @@ class MainWindow(QMainWindow):
         self.paused = False
         self.combined = None
         self.split_pos = None
-        self.current_progress = None
-        self.finished_encoding = None
+        self.f_probe_msg = None
         self.error_signal.connect(self.err_msg_handler)
         self.progress_signal.connect(self.update_progress)
         self.error_box_signal.connect(self.error_box)
+        self.f_probe_signal.connect(self.send_f_probe_msg)
 
         # Create a central widget
         central_widget = QWidget(self)
@@ -93,6 +94,8 @@ class MainWindow(QMainWindow):
         open("output.txt", "w").close()
         self.append_ascii_art()
 
+    def send_f_probe_msg(self):
+        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {self.f_probe_msg}")
 
     def compare_selection(self):
         first, _ = QFileDialog.getOpenFileName(self, "Select First Video", "", "Video File (*.mkv)")
@@ -103,14 +106,12 @@ class MainWindow(QMainWindow):
                 self.compare_thread.run = lambda: self.compare_videos_side_by_side(first, second)
                 self.compare_thread.start()
 
-
     def thread_check(self):
         self.cancel_encode = False
         if self.pass_param_thread.isRunning():
             return
         else:
             self.pass_param_thread.start()
-
 
     def closeEvent(self, event):
         if self.exit_confirm_box() == QMessageBox.StandardButton.Yes:
@@ -126,7 +127,6 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
-
 
     def exit_confirm_box(self):
         exit_message_box = QMessageBox(self)
@@ -145,26 +145,20 @@ class MainWindow(QMainWindow):
         result = exit_message_box.exec()
         return result
 
-
     def open_config(self):  # noqa
         os.startfile(f"{os.getcwd()}/Resources/Config.ini")
-
 
     def open_output_folder(self):  # noqa
         if self.output_dir:
             os.startfile(f"{self.output_dir}")
 
-
     def cancel_operation(self):
         self.cancel_encode = True
-        self.finished_encoding = True
         self.log_widget.append("Upscaling Canceled.")
         self.stop_ffmpeg()
 
-
     def log_message(self, message):
         self.log_widget.append(message)
-
 
     def open_file_dialog(self):
         file_paths, _ = QFileDialog.getOpenFileNames(self, "Select Files", "",
@@ -195,21 +189,18 @@ class MainWindow(QMainWindow):
         # noinspection SpellCheckingInspection
         self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {self.progress_msg}")
 
-
     def err_msg_handler(self):
         with open("output.txt", "a") as file:
             file.write(self.error_msg + "\n")
-            print(self.error_msg)
         # noinspection SpellCheckingInspection
         self.log_widget.append(f"Upscaling Finished Check Output.txt for Details.")
-
 
     def is_ffmpeg_running(self):
         process_query_limited_information = 0x1000
 
         process_names = "ffmpeg.exe"
         try:
-            processes = (ctypes.c_ulong * 2048)() # noqa
+            processes = (ctypes.c_ulong * 2048)()  # noqa
             cb = ctypes.c_ulong(ctypes.sizeof(processes))
             # noinspection SpellCheckingInspection
             ps_api = ctypes.WinDLL('Psapi.dll')
@@ -224,15 +215,15 @@ class MainWindow(QMainWindow):
                 open_process = kernel32.OpenProcess
 
                 process_handle = open_process(process_query_limited_information, False,
-                                                                    process_id)
+                                              process_id)
 
                 if process_handle:
                     buffer_size = 260
                     buffer = ctypes.create_unicode_buffer(buffer_size)
                     query_full_process_image_name_w = kernel32.QueryFullProcessImageNameW
                     success = query_full_process_image_name_w(process_handle, 0, buffer,
-                                                                                ctypes.byref(
-                                                                                    ctypes.c_ulong(buffer_size)))
+                                                              ctypes.byref(
+                                                                  ctypes.c_ulong(buffer_size)))
                     close_handle = kernel32.CloseHandle
                     close_handle(process_handle)
 
@@ -247,34 +238,6 @@ class MainWindow(QMainWindow):
             self.error_box_signal.emit()
             return False
 
-
-    def process_reading(self):
-        p_bar = tqdm(total=100, position=1, desc="Progress")
-        while not self.finished_encoding:
-            if self.cancel_encode:
-                self.finished_encoding = True
-                break
-
-            if self.current_progress:
-                p_bar.update(self.current_progress - p_bar.n)
-            # noinspection SpellCheckingInspection
-            tqdm_line = p_bar.format_meter(
-                n=p_bar.n,
-                total=p_bar.total,
-                elapsed=p_bar.format_dict['elapsed'],
-                ncols=80,
-            )
-            self.progress_msg = tqdm_line
-            self.progress_signal.emit()
-            p_bar.refresh()
-            QThread.sleep(1)
-        p_bar.close()
-        if self.cancel_encode:
-            return
-        self.progress_msg = "Upscaling Finished Successfully."
-        self.progress_signal.emit()
-
-
     def stop_ffmpeg(self):
         if self.is_ffmpeg_running():
             # noinspection SpellCheckingInspection
@@ -283,13 +246,12 @@ class MainWindow(QMainWindow):
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
 
-
     def start_encoding(self, process):
         # noinspection PyBroadException
         try:
             # noinspection SpellCheckingInspection
-            self.progress_msg = "Calculating Video Duration With FFprobe..."
-            self.progress_signal.emit()
+            self.f_probe_msg = "Calculating Video Duration With FFprobe..."
+            self.f_probe_signal.emit()
             # noinspection SpellCheckingInspection
             probe_process = subprocess.Popen(
                 [
@@ -313,27 +275,41 @@ class MainWindow(QMainWindow):
                 duration = None
             self.progress_msg = f"Video Duration is {duration} Seconds."
             self.progress_signal.emit()
-            self.reading_thread.run = self.process_reading
-            self.reading_thread.start()
+
+            p_bar = tqdm(total=100, position=1, desc="Progress")
             # noinspection SpellCheckingInspection
             for progress in process.run_command_with_progress(popen_kwargs={"creationflags":
-                                                                                    subprocess.CREATE_NO_WINDOW},
+                                                                                subprocess.CREATE_NO_WINDOW},
                                                               duration_override=duration):
                 if self.cancel_encode:
+                    self.stop_ffmpeg()
+                    # noinspection SpellCheckingInspection
+                    self.log_widget.append("Upscaling Canceled.")
                     break
-                self.current_progress = progress
-            self.finished_encoding = True
+                p_bar.update(progress - p_bar.n)
+                # noinspection SpellCheckingInspection
+                tqdm_line = p_bar.format_meter(
+                    n=p_bar.n,
+                    total=p_bar.total,
+                    elapsed=p_bar.format_dict['elapsed'],
+                    ncols=80,
+                )
+                self.progress_msg = tqdm_line
+                self.progress_signal.emit()
+                p_bar.refresh()
+
+            self.progress_msg = "Upscaling Finished Successfully."
+            self.progress_signal.emit()
+            p_bar.close()
 
         except Exception as e:
             if self.cancel_encode:
                 return
             self.exception_msg = e
             self.cancel_encode = True
-            self.finished_encoding = True
             self.error_msg = str(process.stderr)
             self.error_box_signal.emit()
             self.stop_ffmpeg()
-
 
     def pass_param(self):
         if self.cancel_encode:
@@ -371,14 +347,13 @@ class MainWindow(QMainWindow):
             if self.cancel_encode:
                 break
             self.current_file = file
-            print(command)
             process = FfmpegProgress(command)
             self.cancel_encode = False
-            self.finished_encoding = False
+            if self.encode_thread.isRunning():
+                self.encode_thread.wait()
             self.encode_thread.run = lambda: self.start_encoding(process)
             self.encode_thread.start()
             self.encode_thread.wait()
-
 
     def error_box(self):
         with open("output.txt", "a") as file:
@@ -396,7 +371,6 @@ class MainWindow(QMainWindow):
         y = (screen_geometry.height() - warning_message_box.height()) // 2
         warning_message_box.move(x, y)
         warning_message_box.exec()
-
 
     def compare_videos_side_by_side(self, video1_path, video2_path):
         def update_split(val):
@@ -459,7 +433,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.exception_msg = e
             self.error_box_signal.emit()
-
 
     def append_ascii_art(self):
         ascii_art = """
