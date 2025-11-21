@@ -10,7 +10,7 @@ PyAnime4K-GUI is a graphical user interface for hardware accelerated upscaling o
 # Features
 
 1. Batch Video Upscaling: Select multiple video files for upscaling which will be saved to disk.
-2. Configurable Settings: Customize output `dimensions`, `bitrate`, `codec`, and `shaders` etc... directly from GUI.
+2. Configurable Settings: Customize output `dimensions`, `bitrate`, `codec`, and `shaders` etc... directly from the GUI.
 3. Real-Time Progress: Monitor upscaling progress with a visual progress bar.
 4. Log Viewer: View live progress and errors in the GUI.
 5. Cancel Operations: Cancel ongoing upscaling tasks at any time.
