@@ -10,13 +10,15 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
 # Features
 
 1. Batch Video Upscaling: Select multiple video files for upscaling which will be saved to disk.
-2. Configurable Settings: Customize output `dimensions`, `bitrate`, `codec`, and `shaders` via a config file using a text editor.
+2. Configurable Settings: Customize output `dimensions`, `bitrate`, `codec`, and `shaders` etc... directly from GUI.
 3. Real-Time Progress: Monitor upscaling progress with a visual progress bar.
-4. Log Viewer: View live progress in the GUI and ffmpeg stderr in output.txt file.
+4. Log Viewer: View live progress and errors in the GUI.
 5. Cancel Operations: Cancel ongoing upscaling tasks at any time.
 6. Output Folder Access: Quickly navigate to the output folder.
 7. Multiple Subtitle Stream Copy: Includes all subtitle streams from input file.
-8. Compare Two Videos Side-by-Side: Video compare function that display quality changes in real-time.
+8. Upscale hdr/dolby vision input videos while maintaining all their metadata required for playback.
+9. Compare Two Videos Side-by-Side: Video compare function that display quality changes in real-time.
+10. Supports Hardware acceleration for AMD `hevc_amf` and Nvidia `hevc_nvenc`.
 
 
 # Requirements
@@ -41,17 +43,11 @@ PyAnime4K-GUI is a graphical user interface for upscaling video files using FFmp
    pip install -r requirements.txt
    ```
 3. Place the required ffmpeg.exe and ffprobe.exe in the `ffmpeg/` folder.
-4. Ensure the `Resources/Config.ini` file contains your desired settings. You can open `Config.ini` directly from the GUI.:
+4. Ensure the required settings are set properly for your hardware settings. You can configure them directly from the GUI.:
    ```
-    [Settings]
-    width = 3840
-    height = 2160
-    bit_rate = 10M
-    max_bitrate = 20M
-    buffer_size = 40M
-    preset = slow
-    codec = hevc_amf # for Nvidia GPU's use hevc_nvenc
-    shader = Anime4k-ModeA-UL.glsl
+    Codec:
+    For Nvidia GPU's use hevc_nvenc
+    For AMD GPU's use hevc_amf
    ```
 
 # Usage
