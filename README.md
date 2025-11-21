@@ -43,7 +43,7 @@ PyAnime4K-GUI is a graphical user interface for hardware accelerated upscaling o
    pip install -r requirements.txt
    ```
 3. Place the required ffmpeg.exe and ffprobe.exe in the `ffmpeg/` folder.
-4. Ensure the required settings are set properly for your hardware settings. You can configure them directly from the GUI.:
+4. Ensure the required settings are set properly for your GPU. You can configure them directly from the GUI.:
    ```
     Codec:
     For Nvidia GPU's use hevc_nvenc
