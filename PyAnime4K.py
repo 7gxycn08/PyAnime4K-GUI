@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
 from PySide6.QtCore import QThread, Signal, QSharedMemory
 from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt
 from ffmpeg_progress_yield import FfmpegProgress
-from tqdm.asyncio import tqdm
+from tqdm import tqdm
 import subprocess
 import winsound
 import cv2
@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v2.2")
+        self.setWindowTitle("PyAnime4K-GUI v2.3")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -84,7 +84,8 @@ class MainWindow(QMainWindow):
         self.buffer_combo.setText("40M")
 
         self.codec_combo = QComboBox(self)
-        self.codec_combo.addItems(["hevc_amf", "hevc_nvenc"])
+        # noinspection SpellCheckingInspection
+        self.codec_combo.addItems(["hevc_amf", "hevc_nvenc", "h264_amf", "h264_nvenc", "libx265", "libx264"])
         self.shader_combo = QComboBox(self)
         self.shader_combo.setWindowTitle("Shader")
         # noinspection SpellCheckingInspection
@@ -214,6 +215,8 @@ class MainWindow(QMainWindow):
     def cancel_operation(self):
         self.cancel_encode = True
         self.stop_ffmpeg()
+        # noinspection SpellCheckingInspection
+        self.log_widget.append("Upscaling Canceled.")
 
     def log_message(self, message):
         self.log_widget.append(message)
@@ -340,9 +343,6 @@ class MainWindow(QMainWindow):
                                                                                 subprocess.CREATE_NO_WINDOW},
                                                               duration_override=duration):
                 if self.cancel_encode:
-                    self.stop_ffmpeg()
-                    # noinspection SpellCheckingInspection
-                    self.log_widget.append("Upscaling Canceled.")
                     return
                 p_bar.update(progress - p_bar.n)
                 # noinspection SpellCheckingInspection
