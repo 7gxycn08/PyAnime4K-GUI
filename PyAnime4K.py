@@ -1,31 +1,29 @@
 import json
 import os
 import sys
+import pywinstyles
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QFileDialog,
                                QMainWindow, QMessageBox, QComboBox, QLabel, QLineEdit)
 from PySide6.QtCore import QThread, Signal, QSharedMemory
-from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt
+from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt, QAction
 from ffmpeg_progress_yield import FfmpegProgress
 from tqdm import tqdm
 import subprocess
 import winsound
 import cv2
-import pywinstyles
 import ctypes
 
 
 class MainWindow(QMainWindow):
     output_signal = Signal(str)
-    progress_signal = Signal()
-    success_signal = Signal()
-    error_signal = Signal()
-    error_box_signal = Signal()
-    f_probe_signal = Signal()
-    finished_signal = Signal()
+    progress_signal = Signal(str)
+    error_box_signal = Signal(str)
+    f_probe_signal = Signal(str)
+    finished_signal = Signal(str)
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v2.3")
+        self.setWindowTitle("PyAnime4K-GUI v2.4")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -48,7 +46,6 @@ class MainWindow(QMainWindow):
         self.split_pos = None
         self.f_probe_msg = None
         self.finished_msg = None
-        self.error_signal.connect(self.err_msg_handler)
         self.progress_signal.connect(self.update_progress)
         self.error_box_signal.connect(self.error_box)
         self.f_probe_signal.connect(self.send_f_probe_msg)
@@ -57,6 +54,13 @@ class MainWindow(QMainWindow):
         # Create a central widget
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
+        self.menu_bar = self.menuBar()
+        self.file_menu = self.menu_bar.addMenu('File')
+        self.about_in_menu_bar = QAction(QIcon(r"Resources\about.ico"), 'About', self)
+        self.about_in_menu_bar.triggered.connect(self.about_page)
+        self.exit_from_menu_bar = QAction(QIcon(r"Resources\exit.ico"), 'Exit Application', self)
+        self.exit_from_menu_bar.triggered.connect(self.close)
+        self.file_menu.addActions([self.about_in_menu_bar, self.exit_from_menu_bar])
 
         # Layout setup
         text_edit_layout = QVBoxLayout(central_widget)
@@ -85,7 +89,8 @@ class MainWindow(QMainWindow):
 
         self.codec_combo = QComboBox(self)
         # noinspection SpellCheckingInspection
-        self.codec_combo.addItems(["hevc_amf", "hevc_nvenc", "h264_amf", "h264_nvenc", "libx265", "libx264"])
+        self.codec_combo.addItems(["hevc_amf (AMD)", "hevc_nvenc (Nvidia)", "h264_amf (AMD)",
+                                   "h264_nvenc (Nvidia)", "libx265 (CPU)", "libx264 (CPU)"])
         self.shader_combo = QComboBox(self)
         self.shader_combo.setWindowTitle("Shader")
         # noinspection SpellCheckingInspection
@@ -122,11 +127,6 @@ class MainWindow(QMainWindow):
         text_and_combo_layout.addWidget(self.log_widget, 1)
         text_and_combo_layout.addWidget(combo_column_container, 0)
 
-        combo_column_container.setStyleSheet("""
-            background-color: #26282e;          /* match QTextEdit background */
-            padding: 5px;
-        """)
-
         text_edit_layout.addLayout(text_and_combo_layout)
 
         # Create buttons
@@ -154,11 +154,16 @@ class MainWindow(QMainWindow):
         open("output.txt", "w").close()
         self.append_ascii_art()
 
-    def send_f_probe_msg(self):
-        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {self.f_probe_msg}")
+    # noinspection PyMethodMayBeStatic
+    def about_page(self):
+        subprocess.Popen("start https://github.com/7gxycn08/PyAnime4K-GUI",
+                         shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
 
-    def send_finished_msg(self):
-        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {self.finished_msg}")
+    def send_f_probe_msg(self, received_msg):
+        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {received_msg}")
+
+    def send_finished_msg(self, received_msg):
+        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {received_msg}")
 
     def compare_selection(self):
         first, _ = QFileDialog.getOpenFileName(self, "Select First Video", "", "Video File (*.mkv)")
@@ -184,8 +189,7 @@ class MainWindow(QMainWindow):
                 self.stop_ffmpeg()
                 event.accept()
             except Exception as e:
-                self.exception_msg = e
-                self.error_box_signal.emit()
+                self.error_box_signal.emit(e)
                 event.accept()
             event.accept()
         else:
@@ -246,15 +250,9 @@ class MainWindow(QMainWindow):
             self.log_widget.append(f"File selection canceled.")
             self.activateWindow()
 
-    def update_progress(self):
+    def update_progress(self, received_msg):
         # noinspection SpellCheckingInspection
-        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {self.progress_msg}")
-
-    def err_msg_handler(self):
-        with open("output.txt", "a") as file:
-            file.write(self.error_msg + "\n")
-        # noinspection SpellCheckingInspection
-        self.log_widget.append(f"Upscaling Finished Check Output.txt for ffmpeg encoding summary.")
+        self.log_widget.append(f"[Upscaling] - {os.path.basename(self.current_file)} - {received_msg}")
 
     def is_ffmpeg_running(self):
         process_query_limited_information = 0x1000
@@ -295,8 +293,7 @@ class MainWindow(QMainWindow):
             return False
 
         except Exception as e:
-            self.exception_msg = e
-            self.error_box_signal.emit()
+            self.error_box_signal.emit(e)
             return False
 
     def stop_ffmpeg(self):
@@ -312,7 +309,7 @@ class MainWindow(QMainWindow):
         try:
             # noinspection SpellCheckingInspection
             self.f_probe_msg = "Calculating Video Duration With FFprobe..."
-            self.f_probe_signal.emit()
+            self.f_probe_signal.emit(self.f_probe_msg)
             # noinspection SpellCheckingInspection
             probe_process = subprocess.Popen(
                 [
@@ -335,7 +332,7 @@ class MainWindow(QMainWindow):
             except (KeyError, ValueError, json.JSONDecodeError):
                 duration = None
             self.progress_msg = f"Video Duration is {duration} Seconds."
-            self.progress_signal.emit()
+            self.progress_signal.emit(self.progress_msg)
 
             p_bar = tqdm(total=100, position=1, desc="Progress")
             # noinspection SpellCheckingInspection
@@ -353,11 +350,11 @@ class MainWindow(QMainWindow):
                     ncols=80,
                 )
                 self.progress_msg = tqdm_line
-                self.progress_signal.emit()
+                self.progress_signal.emit(self.progress_msg)
                 p_bar.refresh()
-
-            self.finished_msg = "Upscaling Finished Successfully."
-            self.finished_signal.emit()
+                if progress == 100:
+                    self.finished_msg = "Upscaling Finished Successfully."
+                    self.finished_signal.emit(self.finished_msg)
             p_bar.close()
 
         except Exception as e:
@@ -366,8 +363,25 @@ class MainWindow(QMainWindow):
             self.exception_msg = e
             self.cancel_encode = True
             self.error_msg = str(process.stderr)
-            self.error_box_signal.emit()
+            self.error_box_signal.emit(self.error_msg)
             self.stop_ffmpeg()
+
+    # noinspection PyMethodMayBeStatic
+    # noinspection SpellCheckingInspection
+    def get_codec(self, selected_codec):
+        codecs = (
+            "hevc_amf",
+            "hevc_nvenc",
+            "h264_amf",
+            "h264_nvenc",
+            "libx265",
+        )
+
+        for codec in codecs:
+            if codec in selected_codec:
+                return codec
+
+        return "libx264"
 
     def pass_param(self):
         if self.cancel_encode:
@@ -378,7 +392,8 @@ class MainWindow(QMainWindow):
         bit_rate = self.bit_combo.text()
         max_bitrate = self.max_combo.text()
         buffer_size = self.buffer_combo.text()
-        codec = self.codec_combo.currentText()
+        selected_codec = self.codec_combo.currentText()
+        codec = self.get_codec(selected_codec)
         shader = self.shader_combo.currentText()
         hdr = self.hdr_combo.currentText()
 
@@ -439,11 +454,11 @@ class MainWindow(QMainWindow):
             self.encode_thread.start()
             self.encode_thread.wait()
 
-    def error_box(self):
+    def error_box(self, received_msg):
         with open("output.txt", "a") as file:
-            file.write(str(self.exception_msg) + "\n")
-        with open("output.txt", 'r', encoding='utf-8') as f:
-            text = f.read()
+            file.write(str(received_msg) + "\n")
+        with open("output.txt", 'r', encoding='utf-8') as read_file:
+            text = read_file.read()
         self.log_widget.append(text)
         warning_message_box = QMessageBox(self)
         warning_message_box.setIcon(QMessageBox.Icon.Critical)
@@ -516,8 +531,7 @@ class MainWindow(QMainWindow):
             cap2.release()
             cv2.destroyAllWindows()
         except Exception as e:
-            self.exception_msg = e
-            self.error_box_signal.emit()
+            self.error_box_signal.emit(e)
 
     def append_ascii_art(self):
         ascii_art = """
@@ -561,57 +575,12 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setStyleSheet("""
-            QTextEdit {
-                background-color: #26282e;
-                border: none;
-                selection-background-color: #906e27;
-            }
-            QPushButton {
-                background-color: #26282e;
-            }
-            QPushButton:hover {
-                border-radius: 5px;
-                border-width: 2px;
-                background-color: #906e27;
-            }
-            QLineEdit {
-                border: none;
-                border-bottom: 2px solid gray;
-                padding: 4px;
-                background: transparent;
-                color: white;
-                selection-background-color: #906e27;
-            }
-            QLineEdit:focus {
-                border-bottom: 2px solid #906e27;
-            }
-            QLineEdit:hover {
-                border-bottom: 2px solid #906e27;
-            }
-            QComboBox {
-                border: none;
-                border-bottom: 2px solid gray;
-            }
-            QComboBox:focus {
-                border-bottom: 2px solid #906e27;
-            }
-            QComboBox:hover {
-                border-bottom: 2px solid #906e27;
-            }
-            QComboBox QAbstractItemView {
-                outline: 1px outset #906e27;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                border-left: none; 
-            }
-            QMessageBox QPushButton {
-                border: none;
-                border: 1px solid #906e27;
-                border-radius: 8px;
-                padding: 4px 12px;
-            }
-            """)
+    if app.styleHints().colorScheme() == Qt.ColorScheme.Dark:
+        with open(r"Resources/dark_theme_utf8.qss", "r") as f:
+            app.setStyleSheet(f.read())
+    else:
+        with open(r"Resources/light_theme_utf8.qss", "r") as f:
+            app.setStyleSheet(f.read())
     shared_mem = QSharedMemory("PyAnime4K")
     if not shared_mem.create(1):
         # Already running
