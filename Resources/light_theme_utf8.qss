@@ -68,3 +68,25 @@ QMenu::item{
 QMenu::item:selected {
     background-color: #906e27;
 }
+QTextEdit QScrollBar:vertical {
+    width: 15px;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    height: 0px;
+}
+QTextEdit QScrollBar::handle:vertical {
+    background: #906e27;
+    width: 15px;
+}
+QTextEdit QScrollBar:horizontal {
+    height: 15px;
+}
+QTextEdit QScrollBar::handle:horizontal {
+    background: #906e27;
+    height: 15px;
+}
