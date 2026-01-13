@@ -3,9 +3,9 @@ import os
 import sys
 import pywinstyles
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QFileDialog,
-                               QMainWindow, QMessageBox, QComboBox, QLabel, QLineEdit)
+                               QMainWindow, QMessageBox, QComboBox, QLabel, QLineEdit, QFrame)
 from PySide6.QtCore import QThread, Signal, QSharedMemory
-from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt, QAction
+from PySide6.QtGui import QIcon, QTextCursor, QTextBlockFormat, Qt, QAction, QIntValidator
 from ffmpeg_progress_yield import FfmpegProgress
 from tqdm import tqdm
 import subprocess
@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v2.4")
+        self.setWindowTitle("PyAnime4K-GUI v2.5")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -72,6 +72,9 @@ class MainWindow(QMainWindow):
         # Create a QTextEdit widget for logs
         self.log_widget = QTextEdit(self)
         self.log_widget.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self.log_widget.setFrameShape(QFrame.Shape.NoFrame)
+        self.log_widget.setFrameShadow(QFrame.Shadow.Plain)
+        self.log_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.log_widget.setReadOnly(True)
         self.width_combo = QLineEdit(self)
         self.width_combo.setText("3840")
@@ -86,8 +89,11 @@ class MainWindow(QMainWindow):
         self.max_combo.setText("20M")
         self.buffer_combo = QLineEdit(self)
         self.buffer_combo.setText("40M")
+        self.set_line_edit_frames()
 
         self.codec_combo = QComboBox(self)
+        self.codec_combo.setEditable(True)
+        self.codec_combo.lineEdit().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         # noinspection SpellCheckingInspection
         self.codec_combo.addItems(["hevc_amf (AMD)", "hevc_nvenc (Nvidia)", "h264_amf (AMD)",
                                    "h264_nvenc (Nvidia)", "libx265 (CPU)", "libx264 (CPU)"])
@@ -153,6 +159,21 @@ class MainWindow(QMainWindow):
         self.cancel_button.clicked.connect(self.cancel_operation)
         open("output.txt", "w").close()
         self.append_ascii_art()
+
+    def set_line_edit_frames(self):
+        line_edits = [self.width_combo,
+                      self.height_combo,
+                      self.max_combo,
+                      self.bit_combo,
+                      self.buffer_combo]
+        for edit in line_edits:
+            edit.setFrame(False)
+            if edit == line_edits[0] or edit == line_edits[1]:
+                edit.setMaxLength(4)
+                edit.setValidator(QIntValidator(0, 9999))
+            else:
+                edit.setMaxLength(3)
+
 
     # noinspection PyMethodMayBeStatic
     def about_page(self):
@@ -396,6 +417,8 @@ class MainWindow(QMainWindow):
         codec = self.get_codec(selected_codec)
         shader = self.shader_combo.currentText()
         hdr = self.hdr_combo.currentText()
+        if not self.selected_files:
+            return
 
         for file in self.selected_files:
             sys.stdout.flush()
