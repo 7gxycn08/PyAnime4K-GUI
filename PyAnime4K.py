@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyAnime4K-GUI v2.5")
+        self.setWindowTitle("PyAnime4K-GUI v2.6")
         self.setWindowIcon(QIcon('Resources/anime.ico'))
         self.setGeometry(100, 100, 1000, 650)
         self.selected_files = None
@@ -92,11 +92,11 @@ class MainWindow(QMainWindow):
         self.set_line_edit_frames()
 
         self.codec_combo = QComboBox(self)
-        self.codec_combo.setEditable(True)
-        self.codec_combo.lineEdit().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.codec_combo.setEditable(False)
         # noinspection SpellCheckingInspection
         self.codec_combo.addItems(["hevc_amf (AMD)", "hevc_nvenc (Nvidia)", "h264_amf (AMD)",
-                                   "h264_nvenc (Nvidia)", "libx265 (CPU)", "libx264 (CPU)"])
+                                   "h264_nvenc (Nvidia)", "av1_amf (AMD)", "av1_nvenc (Nvidia)",
+                                   "libx265 (CPU)", "libx264 (CPU)", "libaom-av1 (CPU)"])
         self.shader_combo = QComboBox(self)
         self.shader_combo.setWindowTitle("Shader")
         # noinspection SpellCheckingInspection
@@ -395,6 +395,9 @@ class MainWindow(QMainWindow):
             "hevc_nvenc",
             "h264_amf",
             "h264_nvenc",
+            "av1_amf",
+            "av1_nvenc",
+            "libaom-av1",
             "libx265",
         )
 
