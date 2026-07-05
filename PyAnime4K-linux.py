@@ -281,10 +281,7 @@ class MainWindow(QMainWindow):
     def stop_ffmpeg(self):
         if self.is_ffmpeg_running():
             # noinspection SpellCheckingInspection
-            subprocess.call(
-                ["taskkill", "/F", "/IM", "ffmpeg.exe"],
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
+            subprocess.run(["pkill", "-9", "-x", "ffmpeg"])
 
     def start_encoding(self, process):
         # noinspection PyBroadException
@@ -295,7 +292,7 @@ class MainWindow(QMainWindow):
             # noinspection SpellCheckingInspection
             probe_process = subprocess.Popen(
                 [
-                    "ffmpeg/ffprobe.exe",
+                    "ffmpeg/ffprobe.bin",
                     "-v", "error",
                     "-select_streams", "v:0",
                     "-show_entries", "format=duration",
@@ -390,7 +387,7 @@ class MainWindow(QMainWindow):
             if hdr == "on":
                 # noinspection SpellCheckingInspection
                 command = [
-                    "ffmpeg/ffmpeg.exe",
+                    "ffmpeg/ffmpeg.bin",
                     "-loglevel", "info",
                     "-i", f"{file}",
                     "-map", "0:v",
@@ -414,7 +411,7 @@ class MainWindow(QMainWindow):
             else:
                 # noinspection SpellCheckingInspection
                 command = [
-                    "ffmpeg/ffmpeg.exe",
+                    "ffmpeg/ffmpeg.bin",
                     "-loglevel", "info",
                     "-i", f"{file}",
                     "-map", "0:v",
