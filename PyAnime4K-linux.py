@@ -10,6 +10,7 @@ from tqdm import tqdm
 import subprocess
 import cv2
 import psutil
+from pathlib import Path
 
 
 class MainWindow(QMainWindow):
@@ -232,7 +233,7 @@ class MainWindow(QMainWindow):
 
     def open_output_folder(self):  # noqa
         if self.output_dir:
-            os.startfile(f"{self.output_dir}")
+            subprocess.run(["xdg-open", str(self.output_dir)])
 
     def cancel_operation(self):
         self.cancel_encode = True
@@ -290,9 +291,10 @@ class MainWindow(QMainWindow):
             self.f_probe_msg = "Calculating Video Duration With FFprobe..."
             self.f_probe_signal.emit(self.f_probe_msg)
             # noinspection SpellCheckingInspection
+            ff_probe = Path(__file__).parent / "ffmpeg" / "ffprobe"
             probe_process = subprocess.Popen(
                 [
-                    "ffmpeg/ffprobe.bin",
+                    str(ff_probe),
                     "-v", "error",
                     "-select_streams", "v:0",
                     "-show_entries", "format=duration",
@@ -301,8 +303,7 @@ class MainWindow(QMainWindow):
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
-                creationflags=subprocess.CREATE_NO_WINDOW
+                text=True
             )
             stdout, stderr = probe_process.communicate()
             try:
@@ -315,9 +316,7 @@ class MainWindow(QMainWindow):
 
             p_bar = tqdm(total=100, position=1, desc="Progress")
             # noinspection SpellCheckingInspection
-            for progress in process.run_command_with_progress(popen_kwargs={"creationflags":
-                                                                                subprocess.CREATE_NO_WINDOW},
-                                                              duration_override=duration):
+            for progress in process.run_command_with_progress(duration_override=duration):
                 if self.cancel_encode:
                     return
                 p_bar.update(progress - p_bar.n)
@@ -386,45 +385,60 @@ class MainWindow(QMainWindow):
             sys.stderr.flush()
             if hdr == "on":
                 # noinspection SpellCheckingInspection
+                ff_mpeg = Path(__file__).parent / "ffmpeg" / "ffmpeg"
+                output = Path(self.output_dir) / f"{Path(file).stem}-upscaled.mkv"
+                shader_path = Path(__file__).parent / "shaders" / shader
+
                 command = [
-                    "ffmpeg/ffmpeg.bin",
+                    str(ff_mpeg),
                     "-loglevel", "info",
-                    "-i", f"{file}",
+                    "-i", str(file),
                     "-map", "0:v",
                     "-map", "0:s?",
                     "-map", "0:a",
                     "-vf", (
                         f"format=p010le,"
-                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}"
+                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:"
+                        f"custom_shader_path={shader_path}"
                     ),
                     "-c:s", "copy",
                     "-c:a", "copy",
                     "-c:d", "copy",
-                    "-b:v", f"{bit_rate}",
-                    "-maxrate", f"{max_bitrate}",
-                    "-bufsize", f"{buffer_size}",
-                    "-c:v", f"{codec}",
+                    "-b:v", str(bit_rate),
+                    "-maxrate", str(max_bitrate),
+                    "-bufsize", str(buffer_size),
+                    "-c:v", str(codec),
                     "-map_metadata", "0",
-                    f"{self.output_dir}\\{os.path.basename(file).removesuffix('.mkv')
-                    .removesuffix('.mp4')}-upscaled.mkv"
+                    str(output)
                 ]
             else:
                 # noinspection SpellCheckingInspection
+                ff_mpeg = Path(__file__).parent / "ffmpeg" / "ffmpeg"
+                output = Path(self.output_dir) / f"{Path(file).stem}-upscaled.mkv"
+                shader_path = Path(__file__).parent / "shaders" / shader
+
                 command = [
-                    "ffmpeg/ffmpeg.bin",
+                    str(ff_mpeg),
                     "-loglevel", "info",
-                    "-i", f"{file}",
+                    "-i", str(file),
                     "-map", "0:v",
                     "-map", "0:s?",
-                    "-map", "0:a",
+                    "-map", "0:a?",
                     "-init_hw_device", "vulkan",
-                    "-vf", f"format=yuv420p,hwupload,"
-                           f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:custom_shader_path=shaders/{shader}",
-                    "-c:s", "copy", "-c:a", "copy", "-c:d", "copy",
-                    "-b:v", f"{bit_rate}", "-maxrate", f"{max_bitrate}", "-bufsize", f"{buffer_size}",
-                    "-c:v", f"{codec}",
-                    f"{self.output_dir}\\{os.path.basename(file).removesuffix(".mkv")
-                    .removesuffix(".mp4")}-upscaled.mkv"
+                    "-vf",
+                    (
+                        f"format=yuv420p,hwupload,"
+                        f"libplacebo=w={width}:h={height}:upscaler=ewa_lanczos:"
+                        f"custom_shader_path={shader_path}"
+                    ),
+                    "-c:s", "copy",
+                    "-c:a", "copy",
+                    "-c:d", "copy",
+                    "-b:v", str(bit_rate),
+                    "-maxrate", str(max_bitrate),
+                    "-bufsize", str(buffer_size),
+                    "-c:v", str(codec),
+                    str(output),
                 ]
 
             if self.cancel_encode:
