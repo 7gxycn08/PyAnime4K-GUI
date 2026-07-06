@@ -233,7 +233,22 @@ class MainWindow(QMainWindow):
 
     def open_output_folder(self):  # noqa
         if self.output_dir:
-            subprocess.run(["xdg-open", str(self.output_dir)])
+            env = os.environ.copy()
+
+            # Restore the original library path if a freezer modified it.
+            if "LD_LIBRARY_PATH_ORIG" in env:
+                env["LD_LIBRARY_PATH"] = env.pop("LD_LIBRARY_PATH_ORIG")
+            else:
+                env.pop("LD_LIBRARY_PATH", None)
+
+            for var in (
+                    "QT_PLUGIN_PATH",
+                    "QT_QPA_PLATFORM_PLUGIN_PATH",
+                    "QML_IMPORT_PATH",
+                    "QML2_IMPORT_PATH",
+            ):
+                env.pop(var, None)
+            subprocess.run(["xdg-open", self.output_dir],env=env, check=False)
 
     def cancel_operation(self):
         self.cancel_encode = True
