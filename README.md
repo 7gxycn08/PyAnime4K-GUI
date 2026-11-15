@@ -1,5 +1,6 @@
 
-<img width="1017" height="765" alt="2 2" src="https://github.com/user-attachments/assets/dbcef93a-2efa-4581-9cd2-f6a3db23c698" />
+<img width="1017" height="765" alt="image" src="https://github.com/user-attachments/assets/a3a37aaa-7038-49ca-a20f-6d63cb4b89fb" />
+
 
 
 ## PyAnime4K-GUI
