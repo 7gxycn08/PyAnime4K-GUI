@@ -3,3 +3,4 @@ ffmpeg_progress_yield
 tqdm
 opencv-python
 pywinstyles
+numpy
